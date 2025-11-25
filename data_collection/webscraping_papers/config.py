@@ -7,10 +7,11 @@ SEMANTIC_SCHOLAR_KEY = os.getenv("SEMANTIC_SCHOLAR_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 # Paths
-PAPERS_DIR = "../data/papers"
-TEXT_DIR = "../data/texts"
-CHUNKS_DIR = "../data/chunks"
-DB_PATH = "../data/papers.db"
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+PAPERS_DIR = os.path.join(ROOT_DIR, "data", "papers")
+TEXT_DIR = os.path.join(ROOT_DIR, "data", "texts")
+CHUNKS_DIR = os.path.join(ROOT_DIR, "data", "chunks")
+DB_PATH = os.path.join(ROOT_DIR, "data", "papers.db")
 
 # Pipeline params
 MAX_RESULTS = 100
