@@ -1,13 +1,13 @@
-import requests, json, os
+import requests, json, os, time
 from tqdm import tqdm
 import arxiv
-from config import SEMANTIC_SCHOLAR_KEY, PAPERS_DIR, MAX_RESULTS
+from config import SEMANTIC_SCHOLAR_KEY, PAPERS_DIR, MAX_RESULTS, REQUEST_DELAY, MAX_RETRIES
 
 os.makedirs(PAPERS_DIR, exist_ok=True)
 
-def search_semantic_scholar(query, limit=100):
+def search_semantic_scholar(query, limit=100, max_retries=MAX_RETRIES):
     """
-    Search Semantic Scholar for papers matching the query
+    Search Semantic Scholar for papers matching the query with retry logic
     """
     endpoint = "https://api.semanticscholar.org/graph/v1/paper/search"
     params = {
@@ -18,37 +18,79 @@ def search_semantic_scholar(query, limit=100):
     headers = {}
     if SEMANTIC_SCHOLAR_KEY:
         headers["x-api-key"] = SEMANTIC_SCHOLAR_KEY
-    resp = requests.get(endpoint, params=params, headers=headers)   
-    resp.raise_for_status()
-    return resp.json()
 
-def search_arxiv(query, max_results=100):
-    """
-    Search arXiv for papers matching the query
-    """
-    client = arxiv.Client()
-    search = arxiv.Search(
-        query=query,
-        max_results=max_results,
-        sort_by=arxiv.SortCriterion.Relevance
-    )
-    results = []
-    for result in search.results():
-        results.append({
-            "title": result.title,
-            "authors": [author.name for author in result.authors],
-            "year": result.published.year,
-            "pdf_url": result.pdf_url,
-            "id": result.get_short_id(),
-            "abstract": result.summary,
-            "source": "arXiv"
-        })
-    return results
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(endpoint, params=params, headers=headers, timeout=30)
 
-def build_manifest(queries):
+            # Handle rate limiting
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get('Retry-After', 60))
+                print(f"Rate limited. Waiting {retry_after} seconds before retry...")
+                time.sleep(retry_after)
+                continue
+
+            resp.raise_for_status()
+            return resp.json()
+
+        except requests.exceptions.RequestException as e:
+            wait_time = 2 ** attempt  # Exponential backoff: 1, 2, 4, 8, 16 seconds
+            print(f"Error on attempt {attempt + 1}/{max_retries}: {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(f"Failed to fetch results for query '{query}' after {max_retries} attempts")
+                return {"data": []}  # Return empty result instead of crashing
+
+    return {"data": []}
+
+def search_arxiv(query, max_results=100, max_retries=3):
+    """
+    Search arXiv for papers matching the query with retry logic
+    """
+    for attempt in range(max_retries):
+        try:
+            client = arxiv.Client(
+                page_size=100,
+                delay_seconds=3,  # Built-in delay between API calls
+                num_retries=3
+            )
+            search = arxiv.Search(
+                query=query,
+                max_results=max_results,
+                sort_by=arxiv.SortCriterion.Relevance
+            )
+            results = []
+            for result in client.results(search):
+                results.append({
+                    "title": result.title,
+                    "authors": [author.name for author in result.authors],
+                    "year": result.published.year,
+                    "pdf_url": result.pdf_url,
+                    "id": result.get_short_id(),
+                    "abstract": result.summary,
+                    "source": "arXiv"
+                })
+            return results
+        except Exception as e:
+            wait_time = 2 ** attempt
+            print(f"arXiv error on attempt {attempt + 1}/{max_retries}: {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(f"Failed to fetch arXiv results for query '{query}' after {max_retries} attempts")
+                return []
+    return []
+
+def build_manifest(queries, delay_between_queries=REQUEST_DELAY):
     manifest = []
-    for q in queries:
-        print("Semantic Scholar search for:", q)
+
+    # Search Semantic Scholar
+    print(f"\n=== Searching Semantic Scholar for {len(queries)} queries ===")
+    for i, q in enumerate(queries, 1):
+        print(f"[{i}/{len(queries)}] Semantic Scholar search for: {q}")
         data = search_semantic_scholar(q, limit=MAX_RESULTS)
         for item in data.get("data", []):
             paper = {
@@ -62,11 +104,23 @@ def build_manifest(queries):
                 "id": item.get("paperId")
             }
             manifest.append(paper)
-        
-    for q in queries:
-        print("arXiv search for:", q)
+
+        # Add delay between queries to avoid rate limiting
+        if i < len(queries):
+            print(f"Waiting {delay_between_queries} seconds before next query...")
+            time.sleep(delay_between_queries)
+
+    # Search arXiv
+    print(f"\n=== Searching arXiv for {len(queries)} queries ===")
+    for i, q in enumerate(queries, 1):
+        print(f"[{i}/{len(queries)}] arXiv search for: {q}")
         for r in search_arxiv(q, max_results=50):
             manifest.append(r)
+
+        # Add delay between queries
+        if i < len(queries):
+            print(f"Waiting {delay_between_queries} seconds before next query...")
+            time.sleep(delay_between_queries)
 
     # Write manifest to file
     with open(os.path.join(PAPERS_DIR, "manifest.json"), "w", encoding="utf-8") as f:
