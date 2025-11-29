@@ -1,5 +1,10 @@
 import os, json, time
 import pdfplumber
+import sys
+
+# Add parent directory to path to import config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from tqdm import tqdm
 from config import (
     PAPERS_DIR, TEXT_DIR, OPENAI_API_KEY, ANTHROPIC_API_KEY,

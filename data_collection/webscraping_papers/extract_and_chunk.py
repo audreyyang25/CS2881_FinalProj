@@ -1,5 +1,11 @@
+# not using this file currently
 import os, json
 import pdfplumber
+import sys
+
+# Add parent directory to path to import config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from tqdm import tqdm
 from config import PAPERS_DIR, TEXT_DIR, CHUNKS_DIR, CHUNK_SIZE, CHUNK_OVERLAP
 

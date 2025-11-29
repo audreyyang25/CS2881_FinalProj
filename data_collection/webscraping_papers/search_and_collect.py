@@ -1,6 +1,11 @@
 import requests, json, os, time
 from tqdm import tqdm
 import arxiv
+import sys
+
+# Add parent directory to path to import config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config import SEMANTIC_SCHOLAR_KEY, PAPERS_DIR, MAX_RESULTS, REQUEST_DELAY, MAX_RETRIES
 
 os.makedirs(PAPERS_DIR, exist_ok=True)
