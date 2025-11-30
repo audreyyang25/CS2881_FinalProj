@@ -276,7 +276,7 @@ def main():
     # Configuration
     papers_dir = "../../data/papers"
     manifest_path = "../../data/papers/manifest.json"
-    output_file = "../../data/paper_conclusions.jsonl"
+    output_file = "../../embedding_ngram_papers/paper_conclusions.jsonl"
 
     # Optional: set a limit for testing (None = process all)
     limit = None  # Change to a number like 10 for testing
@@ -284,9 +284,7 @@ def main():
     print("="*60)
     print("PDF Conclusion Extractor")
     print("="*60)
-    print(f"Papers directory: {papers_dir}")
-    print(f"Manifest file: {manifest_path}")
-    print(f"Output file: {output_file}")
+
     if limit:
         print(f"Processing limit: {limit} files")
     print("="*60)
