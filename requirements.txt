@@ -14,4 +14,8 @@ sentence-transformers
 voyageai
 PyPDF2
 torch>=2.0.0
-numpy<2.0.0
+numpy
+hdbscan 
+umap-learn 
+matplotlib 
+scikit-learn
