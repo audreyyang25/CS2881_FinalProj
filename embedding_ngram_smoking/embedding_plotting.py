@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
+import glob
 
 def load_jsonl(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -12,8 +13,11 @@ def load_jsonl(path):
 def euclidean(a, b):
     return np.linalg.norm(a - b)
 
-def main():
-    data = load_jsonl("smoking_claims_embedded.jsonl")
+def process_embedding_file(input_file, model_name):
+    """Process a single embedding file and generate plots"""
+    print(f"\nProcessing {model_name} embeddings from {input_file}...")
+
+    data = load_jsonl(input_file)
 
     # -----------------------------
     # Extract embeddings
@@ -24,19 +28,19 @@ def main():
 
     xs, ys, claims, dates, types = [], [], [], [], []
 
-    # Reference point 1 (harmful)
+    # Reference point 1 (exists)
     xs.append(0.0)
     ys.append(0.0)
     claims.append(data[0]["Claim"])
     dates.append(0)
-    types.append("Reference (harmful)")
+    types.append("Reference (exists)")
 
-    # Reference point 2 (beneficial)
+    # Reference point 2 (does not exist)
     xs.append(d12)
     ys.append(0.0)
     claims.append(data[1]["Claim"])
     dates.append(0)
-    types.append("Reference (beneficial)")
+    types.append("Reference (does not exist)")
 
     # Other claims
     for entry in data[2:]:
@@ -98,10 +102,10 @@ def main():
         hover_data={"claim": True, "date": True, "x": False, "y": False},
         color_continuous_scale="Viridis",
         range_color=[min_year_A, max_year_A],
-        title="Embedding (No -1 dates)"
+        title=f"Embedding - {model_name} (No -1 dates)"
     )
-    fig_html_A.add_annotation(x=0, y=0.02, text="Ref: Harmful", showarrow=False)
-    fig_html_A.add_annotation(x=d12, y=0.02, text="Ref: Beneficial", showarrow=False)
+    fig_html_A.add_annotation(x=0, y=0.02, text="Ref: do exist", showarrow=False)
+    fig_html_A.add_annotation(x=d12, y=0.02, text="Ref: does not exist", showarrow=False)
 
     # ============================================================
     # 1b) PLOTLY VERSION — INCLUDE -1 DATES IN RED (FIXED)
@@ -119,7 +123,7 @@ def main():
         hover_data={"claim": True, "date": True, "x": False, "y": False},
         color_continuous_scale="Viridis",
         range_color=[min_year_B, max_year_B],
-        title="Embedding (Including -1 dates in red)"
+        title=f"Embedding - {model_name} (Including -1 dates in red)"
     )
 
     # Add red points as a separate trace
@@ -134,8 +138,8 @@ def main():
     )
 
     # Add reference annotations
-    fig_html_B.add_annotation(x=0, y=0.02, text="Ref: Harmful", showarrow=False)
-    fig_html_B.add_annotation(x=d12, y=0.02, text="Ref: Beneficial", showarrow=False)
+    fig_html_A.add_annotation(x=0, y=0.02, text="Ref: do exist", showarrow=False)
+    fig_html_A.add_annotation(x=d12, y=0.02, text="Ref: does not exist", showarrow=False)
 
     # Clean layout
     fig_html_B.update_layout(
@@ -155,9 +159,9 @@ def main():
     colors_A = plt.cm.viridis(norm_A)
 
     axA.scatter(df_no_minus1["x"], df_no_minus1["y"], c=colors_A, s=40)
-    axA.text(0, 0, "Ref: Harmful", fontsize=10, va="bottom")
-    axA.text(d12, 0, "Ref: Beneficial", fontsize=10, va="bottom")
-    axA.set_title("Embedding (No -1 dates)")
+    axA.text(0, 0, "Ref: smoking is harmful", fontsize=10, va="bottom")
+    axA.text(d12, 0, "Ref: smoking is good", fontsize=10, va="bottom")
+    axA.set_title(f"Embedding - {model_name} (No -1 dates)")
     axA.set_xlabel("X-axis")
     axA.set_ylabel("Y-axis")
     axA.grid(True, linestyle="--", alpha=0.3)
@@ -199,9 +203,9 @@ def main():
         label="-1 Claims"
     )
 
-    axB.text(0, 0, "Ref: Harmful", fontsize=10, va="bottom")
-    axB.text(d12, 0, "Ref: Beneficial", fontsize=10, va="bottom")
-    axB.set_title("Embedding (Including -1 dates in red)")
+    axB.text(0, 0, "Ref: smoking is harmful", fontsize=10, va="bottom")
+    axB.text(d12, 0, "Ref: smoking is good", fontsize=10, va="bottom")
+    axB.set_title(f"Embedding - {model_name} (Including -1 dates in red)")
     axB.set_xlabel("X-axis")
     axB.set_ylabel("Y-axis")
     axB.grid(True, linestyle="--", alpha=0.3)
@@ -221,22 +225,65 @@ def main():
     output_dir = "plots"
     os.makedirs(output_dir, exist_ok=True)
 
-    fig_html_A.write_html(os.path.join(output_dir, "plot_no_minus1.html"))
-    fig_html_B.write_html(os.path.join(output_dir, "plot_with_minus1.html"))
+    # Include model name in output filenames
+    html_no_minus1 = os.path.join(output_dir, f"{model_name}_plot_no_minus1.html")
+    html_with_minus1 = os.path.join(output_dir, f"{model_name}_plot_with_minus1.html")
+    png_no_minus1 = os.path.join(output_dir, f"{model_name}_plot_no_minus1.png")
+    png_with_minus1 = os.path.join(output_dir, f"{model_name}_plot_with_minus1.png")
 
-    figA.savefig(os.path.join(output_dir, "plot_no_minus1.png"),
-                 dpi=300, bbox_inches="tight")
-    figB.savefig(os.path.join(output_dir, "plot_with_minus1.png"),
-                 dpi=300, bbox_inches="tight")
+    fig_html_A.write_html(html_no_minus1)
+    fig_html_B.write_html(html_with_minus1)
+
+    figA.savefig(png_no_minus1, dpi=300, bbox_inches="tight")
+    figB.savefig(png_with_minus1, dpi=300, bbox_inches="tight")
 
     plt.close(figA)
     plt.close(figB)
 
-    print("Saved:")
-    print(" - plots/plot_no_minus1.html")
-    print(" - plots/plot_with_minus1.html")
-    print(" - plots/plot_no_minus1.png")
-    print(" - plots/plot_with_minus1.png")
+    print(f"✓ Saved {model_name} plots:")
+    print(f"   - {html_no_minus1}")
+    print(f"   - {html_with_minus1}")
+    print(f"   - {png_no_minus1}")
+    print(f"   - {png_with_minus1}")
+
+    return [html_no_minus1, html_with_minus1, png_no_minus1, png_with_minus1]
+
+def main():
+    """Process all model-specific embedding files"""
+    # Find all embedding files matching the pattern
+    embedding_files = glob.glob("*_smoking_claims_embedded.jsonl")
+
+    if not embedding_files:
+        print("No embedding files found!")
+        return
+
+    print("="*60)
+    print("Embedding Scatter Plot Generator")
+    print("="*60)
+    print(f"Found {len(embedding_files)} embedding file(s):")
+    for f in embedding_files:
+        print(f"  - {f}")
+    print("="*60)
+
+    all_generated_files = []
+
+    for embedding_file in embedding_files:
+        # Extract model name from filename
+        # e.g., "openai_smoking_claims_embedded.jsonl" -> "openai"
+        if embedding_file == "smoking_claims_embedded.jsonl":
+            model_name = "default"
+        else:
+            model_name = embedding_file.replace("_smoking_claims_embedded.jsonl", "")
+
+        try:
+            output_files = process_embedding_file(embedding_file, model_name)
+            all_generated_files.extend(output_files)
+        except Exception as e:
+            print(f"Error processing {embedding_file}: {e}")
+
+    print("\n" + "="*60)
+    print(f"Generated {len(all_generated_files)} file(s) total")
+    print("="*60)
 
 if __name__ == "__main__":
     main()

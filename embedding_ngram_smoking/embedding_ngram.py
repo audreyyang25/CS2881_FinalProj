@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+import glob
 
 def load_jsonl(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -30,8 +31,11 @@ def market_update(scores, alpha=0.15):
 
     return np.array(trend)
 
-def main():
-    data = load_jsonl("smoking_claims_embedded.jsonl")
+def process_embedding_file(input_file, model_name):
+    """Process a single embedding file and generate ngram plot"""
+    print(f"\nProcessing {model_name} embeddings from {input_file}...")
+
+    data = load_jsonl(input_file)
 
     # Reference embeddings
     ref_harmful = np.array(data[0]["embedding"])
@@ -73,8 +77,8 @@ def main():
     plt.plot(df["year"], market_trend, color="black", linewidth=2.5,
              label="Market-style belief trend")
 
-    plt.title("Trend of Smoking Belief Over Time\n"
-              "(0 = Smoking is Good, 100 = Smoking is Harmful)")
+    plt.title(f"Trend of Smoking Belief Over Time ({model_name})\n"
+              "(0 = Smoking is good, 100 = Smoking is harmful)")
     plt.xlabel("Year")
     plt.ylabel("Belief Score")
     plt.grid(True, linestyle="--", alpha=0.3)
@@ -82,10 +86,51 @@ def main():
 
     # Save output
     os.makedirs("plots", exist_ok=True)
-    plt.savefig("plots/smoking_claims_ngram_market.png", dpi=300, bbox_inches="tight")
+    output_file = f"plots/{model_name}_smoking_claims_ngram_market.png"
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
 
-    print("Saved: plots/smoking_claims_ngram_market.png")
+    print(f"Saved: {output_file}")
+    return output_file
+
+def main():
+    """Process all model-specific embedding files"""
+    # Find all embedding files matching the pattern
+    embedding_files = glob.glob("*_smoking_claims_embedded.jsonl")
+
+    if not embedding_files:
+        print("No embedding files found!")
+        return
+
+    print("="*60)
+    print("N-gram Market Trend Generator")
+    print("="*60)
+    print(f"Found {len(embedding_files)} embedding file(s):")
+    for f in embedding_files:
+        print(f"  - {f}")
+    print("="*60)
+
+    generated_plots = []
+
+    for embedding_file in embedding_files:
+        # Extract model name from filename
+        # e.g., "openai_smoking_claims_embedded.jsonl" -> "openai"
+        if embedding_file == "smoking_claims_embedded.jsonl":
+            model_name = "default"
+        else:
+            model_name = embedding_file.replace("_smoking_claims_embedded.jsonl", "")
+
+        try:
+            output_file = process_embedding_file(embedding_file, model_name)
+            generated_plots.append(output_file)
+        except Exception as e:
+            print(f"Error processing {embedding_file}: {e}")
+
+    print("\n" + "="*60)
+    print(f"Generated {len(generated_plots)} plot(s):")
+    for plot in generated_plots:
+        print(f"  - {plot}")
+    print("="*60)
 
 if __name__ == "__main__":
     main()
