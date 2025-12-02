@@ -98,7 +98,7 @@ def main():
 
     # Define which models to use
     models_to_run = [
-        # "openai",      # OpenAI text-embedding-3-small (API)
+        "openai",      # OpenAI text-embedding-3-small (API)
         "voyage",      # Voyage lite 02 instruct (API)
         "mxbai",       # mxbai-embed-large-v1 (~1.3GB - safe)
     ]
