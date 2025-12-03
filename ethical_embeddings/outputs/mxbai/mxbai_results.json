@@ -1,0 +1,26 @@
+{
+  "model": "mxbai",
+  "dataset_size": 260,
+  "embedding_dim": 1024,
+  "n_safe": 130,
+  "n_unsafe": 130,
+  "train_size": 193,
+  "test_size": 65,
+  "logistic_regression_1d": {
+    "accuracy": 0.676923076923077,
+    "auc": 0.7528409090909091
+  },
+  "logistic_regression_umap": {
+    "accuracy": 0.47692307692307695,
+    "auc": 0.481060606060606
+  },
+  "mlp_full_embedding": {
+    "accuracy": 0.9076923076923077,
+    "auc": 0.9535984848484849
+  },
+  "centroid_1d": {
+    "accuracy": 0.6434108527131783,
+    "safe_centroid": 6.180755338716335,
+    "unsafe_centroid": 7.097253585536414
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "model": "voyage",
+  "dataset_size": 260,
+  "embedding_dim": 1024,
+  "n_safe": 130,
+  "n_unsafe": 130,
+  "train_size": 193,
+  "test_size": 65,
+  "logistic_regression_1d": {
+    "accuracy": 0.6,
+    "auc": 0.7168560606060607
+  },
+  "logistic_regression_umap": {
+    "accuracy": 0.4461538461538462,
+    "auc": 0.45928030303030304
+  },
+  "mlp_full_embedding": {
+    "accuracy": 0.8923076923076924,
+    "auc": 0.9251893939393939
+  },
+  "centroid_1d": {
+    "accuracy": 0.6356589147286822,
+    "safe_centroid": 0.08654612942835452,
+    "unsafe_centroid": 0.10404125866857024
+  }
+}

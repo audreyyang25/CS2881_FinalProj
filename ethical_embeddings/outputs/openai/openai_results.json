@@ -1,0 +1,26 @@
+{
+  "model": "openai",
+  "dataset_size": 260,
+  "embedding_dim": 1536,
+  "n_safe": 130,
+  "n_unsafe": 130,
+  "train_size": 193,
+  "test_size": 65,
+  "logistic_regression_1d": {
+    "accuracy": 0.6615384615384615,
+    "auc": 0.7178030303030303
+  },
+  "logistic_regression_umap": {
+    "accuracy": 0.5538461538461539,
+    "auc": 0.5265151515151515
+  },
+  "mlp_full_embedding": {
+    "accuracy": 0.9076923076923077,
+    "auc": 0.9678030303030303
+  },
+  "centroid_1d": {
+    "accuracy": 0.6589147286821705,
+    "safe_centroid": 0.2618303641756062,
+    "unsafe_centroid": 0.31850778866327234
+  }
+}
