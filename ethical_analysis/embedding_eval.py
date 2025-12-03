@@ -6,6 +6,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.neural_network import MLPClassifier
 
 
 # ============================================================
@@ -37,14 +38,11 @@ def project_embeddings_1d(embeddings):
     ref_unsafe = embeddings[1]
 
     d12 = np.linalg.norm(ref_safe - ref_unsafe)
-
     xs = []
 
     for emb in embeddings:
         d1 = np.linalg.norm(emb - ref_safe)
         d2 = np.linalg.norm(emb - ref_unsafe)
-
-        # 1D projection formula
         x = (d1**2 - d2**2 + d12**2) / (2 * d12)
         xs.append(x)
 
@@ -78,23 +76,41 @@ def run_pipeline(model_name, jsonl_path):
     # -------------------------
     # REMOVE references from evaluation
     # -------------------------
-    xs_eval = xs[2:]       
+    xs_eval = xs[2:]
     labels_eval = labels[2:]
 
-    # -------------------------
-    # Train/test split for 1D projection
-    # -------------------------
-    X_train, X_test, y_train, y_test = train_test_split(
-        xs_eval.reshape(-1, 1),
-        labels_eval,
+    # ============================================================
+    # SHARED TRAIN–TEST SPLIT FOR ALL MODELS
+    # ============================================================
+
+    indices = np.arange(len(xs_eval))
+
+    train_idx, test_idx = train_test_split(
+        indices,
         test_size=0.25,
         random_state=42,
         stratify=labels_eval
     )
 
-    # -------------------------
-    # Logistic Regression (1D)
-    # -------------------------
+    # 1D projection data
+    X_train = xs_eval[train_idx].reshape(-1, 1)
+    X_test = xs_eval[test_idx].reshape(-1, 1)
+    y_train = labels_eval[train_idx]
+    y_test = labels_eval[test_idx]
+
+    # Full embedding data
+    X_full = embeddings[2:]
+    y_full = labels[2:]
+
+    X_train_full = X_full[train_idx]
+    X_test_full = X_full[test_idx]
+    y_train_full = y_full[train_idx]
+    y_test_full = y_full[test_idx]
+
+    # ============================================================
+    # LOGISTIC REGRESSION (1D PROJECTION)
+    # ============================================================
+
     clf = LogisticRegression().fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     y_proba = clf.predict_proba(X_test)[:, 1]
@@ -108,19 +124,8 @@ def run_pipeline(model_name, jsonl_path):
     print(classification_report(y_test, y_pred, target_names=["unsafe", "safe"]))
 
     # ============================================================
-    # GRADIENT BOOSTING ON FULL EMBEDDINGS
+    # GRADIENT BOOSTING (FULL EMBEDDING)
     # ============================================================
-
-    X_full = embeddings[2:]  # drop reference embeddings
-    y_full = labels[2:]
-
-    X_train_full, X_test_full, y_train_full, y_test_full = train_test_split(
-        X_full,
-        y_full,
-        test_size=0.25,
-        random_state=42,
-        stratify=y_full
-    )
 
     gb = GradientBoostingClassifier()
     gb.fit(X_train_full, y_train_full)
@@ -137,9 +142,36 @@ def run_pipeline(model_name, jsonl_path):
     print(classification_report(y_test_full, y_pred_full,
                                 target_names=["unsafe", "safe"]))
 
-    # -------------------------
-    # Centroid classifier (1D)
-    # -------------------------
+    # ============================================================
+    # NEURAL NETWORK (MLP) — FULL EMBEDDING
+    # ============================================================
+
+    nn = MLPClassifier(
+        hidden_layer_sizes=(256, 128),
+        activation="relu",
+        solver="adam",
+        max_iter=100,
+        random_state=42
+    )
+
+    nn.fit(X_train_full, y_train_full)
+
+    y_pred_nn = nn.predict(X_test_full)
+    y_proba_nn = nn.predict_proba(X_test_full)[:, 1]
+
+    acc_nn = accuracy_score(y_test_full, y_pred_nn)
+    auc_nn = roc_auc_score(y_test_full, y_proba_nn)
+
+    print(f"\n---- Neural Net (MLP) — FULL embedding ----")
+    print(f"Accuracy: {acc_nn:.3f}")
+    print(f"AUC:      {auc_nn:.3f}\n")
+    print(classification_report(y_test_full, y_pred_nn,
+                                target_names=["unsafe", "safe"]))
+
+    # ============================================================
+    # CENTROID CLASSIFIER (1D)
+    # ============================================================
+
     safe_centroid = xs_eval[labels_eval == 1].mean()
     unsafe_centroid = xs_eval[labels_eval == 0].mean()
 
@@ -151,15 +183,16 @@ def run_pipeline(model_name, jsonl_path):
     print(classification_report(labels_eval, centroid_pred,
                                 target_names=["unsafe", "safe"]))
 
-    # -------------------------
-    # Visualization
-    # -------------------------
+    # ============================================================
+    # VISUALIZATION
+    # ============================================================
+
     outdir = f"projection_eval/{model_name}"
     os.makedirs(outdir, exist_ok=True)
 
     plt.figure(figsize=(12, 3))
-    plt.scatter(xs_eval, np.zeros_like(xs_eval), c=labels_eval, cmap="coolwarm",
-                s=80, edgecolors="k")
+    plt.scatter(xs_eval, np.zeros_like(xs_eval), c=labels_eval,
+                cmap="coolwarm", s=80, edgecolors="k")
 
     plt.scatter([safe_centroid], [0], c="blue", marker="X", s=200,
                 label="Safe centroid")
@@ -184,7 +217,9 @@ def run_pipeline(model_name, jsonl_path):
         "accuracy": acc,
         "auc": auc,
         "gb_accuracy": acc_full,
-        "gb_auc": auc_full
+        "gb_auc": auc_full,
+        "nn_accuracy": acc_nn,
+        "nn_auc": auc_nn
     }
 
 
@@ -206,7 +241,10 @@ if __name__ == "__main__":
 
     print("\n=========== SUMMARY ===========")
     for m, res in summary.items():
-        print(f"{m.upper()}: "
-              f"Acc={res['accuracy']:.3f}, AUC={res['auc']:.3f}, "
-              f"GB_Acc={res['gb_accuracy']:.3f}, GB_AUC={res['gb_auc']:.3f}")
+        print(
+            f"{m.upper()}: "
+            f"Acc={res['accuracy']:.3f}, AUC={res['auc']:.3f}, "
+            f"GB_Acc={res['gb_accuracy']:.3f}, GB_AUC={res['gb_auc']:.3f}, "
+            f"NN_Acc={res['nn_accuracy']:.3f}, NN_AUC={res['nn_auc']:.3f}"
+        )
     print("================================\n")
