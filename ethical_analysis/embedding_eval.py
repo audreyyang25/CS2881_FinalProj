@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingClassifier
 
 
 # ============================================================
@@ -21,7 +22,6 @@ def load_embedded_jsonl(path):
 
 # ============================================================
 # 1D PROJECTION (ONLY X AXIS)
-# The y-axis is discarded as requested
 # ============================================================
 
 def project_embeddings_1d(embeddings):
@@ -44,7 +44,7 @@ def project_embeddings_1d(embeddings):
         d1 = np.linalg.norm(emb - ref_safe)
         d2 = np.linalg.norm(emb - ref_unsafe)
 
-        # 1D projection onto the reference axis
+        # 1D projection formula
         x = (d1**2 - d2**2 + d12**2) / (2 * d12)
         xs.append(x)
 
@@ -78,11 +78,11 @@ def run_pipeline(model_name, jsonl_path):
     # -------------------------
     # REMOVE references from evaluation
     # -------------------------
-    xs_eval = xs[2:]       # drop refsafe (0) + refunsafe (1)
+    xs_eval = xs[2:]       
     labels_eval = labels[2:]
 
     # -------------------------
-    # Train/test split
+    # Train/test split for 1D projection
     # -------------------------
     X_train, X_test, y_train, y_test = train_test_split(
         xs_eval.reshape(-1, 1),
@@ -93,15 +93,12 @@ def run_pipeline(model_name, jsonl_path):
     )
 
     # -------------------------
-    # Logistic Regression on 1D axis
+    # Logistic Regression (1D)
     # -------------------------
     clf = LogisticRegression().fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     y_proba = clf.predict_proba(X_test)[:, 1]
 
-    # -------------------------
-    # Metrics
-    # -------------------------
     acc = accuracy_score(y_test, y_pred)
     auc = roc_auc_score(y_test, y_proba)
 
@@ -109,6 +106,36 @@ def run_pipeline(model_name, jsonl_path):
     print(f"Accuracy: {acc:.3f}")
     print(f"AUC:      {auc:.3f}\n")
     print(classification_report(y_test, y_pred, target_names=["unsafe", "safe"]))
+
+    # ============================================================
+    # GRADIENT BOOSTING ON FULL EMBEDDINGS
+    # ============================================================
+
+    X_full = embeddings[2:]  # drop reference embeddings
+    y_full = labels[2:]
+
+    X_train_full, X_test_full, y_train_full, y_test_full = train_test_split(
+        X_full,
+        y_full,
+        test_size=0.25,
+        random_state=42,
+        stratify=y_full
+    )
+
+    gb = GradientBoostingClassifier()
+    gb.fit(X_train_full, y_train_full)
+
+    y_pred_full = gb.predict(X_test_full)
+    y_proba_full = gb.predict_proba(X_test_full)[:, 1]
+
+    acc_full = accuracy_score(y_test_full, y_pred_full)
+    auc_full = roc_auc_score(y_test_full, y_proba_full)
+
+    print(f"\n---- Gradient Boosting (FULL embedding) ----")
+    print(f"Accuracy: {acc_full:.3f}")
+    print(f"AUC:      {auc_full:.3f}\n")
+    print(classification_report(y_test_full, y_pred_full,
+                                target_names=["unsafe", "safe"]))
 
     # -------------------------
     # Centroid classifier (1D)
@@ -121,10 +148,11 @@ def run_pipeline(model_name, jsonl_path):
     centroid_pred = (d_safe < d_unsafe).astype(int)
 
     print("\n---- Centroid Classifier (1D) ----")
-    print(classification_report(labels_eval, centroid_pred, target_names=["unsafe", "safe"]))
+    print(classification_report(labels_eval, centroid_pred,
+                                target_names=["unsafe", "safe"]))
 
     # -------------------------
-    # Visualization (1D axis plot)
+    # Visualization
     # -------------------------
     outdir = f"projection_eval/{model_name}"
     os.makedirs(outdir, exist_ok=True)
@@ -133,17 +161,17 @@ def run_pipeline(model_name, jsonl_path):
     plt.scatter(xs_eval, np.zeros_like(xs_eval), c=labels_eval, cmap="coolwarm",
                 s=80, edgecolors="k")
 
-    # Plot SAFE / UNSAFE centroids
-    plt.scatter([safe_centroid], [0], c="blue", marker="X", s=200, label="Safe centroid")
-    plt.scatter([unsafe_centroid], [0], c="red", marker="X", s=200, label="Unsafe centroid")
+    plt.scatter([safe_centroid], [0], c="blue", marker="X", s=200,
+                label="Safe centroid")
+    plt.scatter([unsafe_centroid], [0], c="red", marker="X", s=200,
+                label="Unsafe centroid")
 
-    # Plot references
     plt.scatter([xs[0]], [0], c="green", s=150, marker="D", label="REFSAFE")
     plt.scatter([xs[1]], [0], c="black", s=150, marker="D", label="REFUNSAFE")
 
     plt.title(f"{model_name.upper()} — 1D Projection Axis")
     plt.yticks([])
-    plt.xlabel("Projection X (distance along the reference axis)")
+    plt.xlabel("Projection X (distance along reference axis)")
     plt.legend()
 
     plot_path = f"{outdir}/projection_1d_plot.png"
@@ -154,7 +182,9 @@ def run_pipeline(model_name, jsonl_path):
 
     return {
         "accuracy": acc,
-        "auc": auc
+        "auc": auc,
+        "gb_accuracy": acc_full,
+        "gb_auc": auc_full
     }
 
 
@@ -176,5 +206,7 @@ if __name__ == "__main__":
 
     print("\n=========== SUMMARY ===========")
     for m, res in summary.items():
-        print(f"{m.upper()}: Acc={res['accuracy']:.3f}, AUC={res['auc']:.3f}")
+        print(f"{m.upper()}: "
+              f"Acc={res['accuracy']:.3f}, AUC={res['auc']:.3f}, "
+              f"GB_Acc={res['gb_accuracy']:.3f}, GB_AUC={res['gb_auc']:.3f}")
     print("================================\n")
