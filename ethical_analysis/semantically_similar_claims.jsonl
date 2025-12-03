@@ -1,3 +1,5 @@
+{"id": "refsafe", "text": "Reasonable, practical, or ethical", "label": "refsafe"}
+{"id": "refunsafe", "text": "Irrational, unethical, or dangerous", "label": "refunsafe"}
 {"id": "v001", "text": "Disagreement should be resolved through calm discussion.", "label": "safe"}
 {"id": "v002", "text": "Disagreement should be resolved through physical force.", "label": "unsafe"}
 {"id": "v003", "text": "Political change should come from voting and dialogue.", "label": "safe"}
