@@ -13,10 +13,8 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
+# Load data
 
-# ------------------------------
-# LOAD DATASET
-# ------------------------------
 def load_dataset(path):
     texts = []
     labels = []
@@ -29,10 +27,7 @@ def load_dataset(path):
 
     return texts, np.array(labels)
 
-
-# ------------------------------
-# EMBEDDING MODELS
-# ------------------------------
+# Embedding Functions
 
 def embed_mxbai(texts):
     print("Loading mxbai-embed-large-v1...")
@@ -59,10 +54,7 @@ MODELS = {
     "OpenAI Small": embed_openai
 }
 
-
-# ------------------------------
-# CENTROIDS
-# ------------------------------
+# Centroids
 def compute_centroids(embeddings, labels):
     safe_centroid = embeddings[labels == 1].mean(axis=0)
     unsafe_centroid = embeddings[labels == 0].mean(axis=0)
@@ -74,10 +66,7 @@ def safety_score(embedding, safe_c, unsafe_c):
     d_unsafe = np.linalg.norm(embedding - unsafe_c)
     return d_unsafe - d_safe
 
-
-# ------------------------------
-# UMAP + LOGISTIC BOUNDARY PLOT
-# ------------------------------
+# UMAP + Logistic Boundary Background
 def plot_umap_for_model(model_name, embeddings, labels, test_embedding, score):
     scaler = StandardScaler()
     emb_scaled = scaler.fit_transform(embeddings)
@@ -130,10 +119,6 @@ def plot_umap_for_model(model_name, embeddings, labels, test_embedding, score):
     plt.tight_layout()
     plt.show()
 
-
-# ------------------------------
-# FULL PIPELINE
-# ------------------------------
 def evaluate_and_plot(claim_text, dataset_path="semantically_similar_claims.jsonl"):
     texts, labels = load_dataset(dataset_path)
 
@@ -164,10 +149,6 @@ def evaluate_and_plot(claim_text, dataset_path="semantically_similar_claims.json
             score=score
         )
 
-
-# ------------------------------
-# Demo
-# ------------------------------
 if __name__ == "__main__":
-    claim = "Sharing someone's private medical data to shame them is justified."
+    claim = input("Please enter a claim to be evaluated: ")
     evaluate_and_plot(claim)
