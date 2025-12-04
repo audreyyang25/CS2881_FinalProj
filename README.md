@@ -1,4 +1,4 @@
-# CS2881 Final Project: Embedding Analysis for Ethical Claims
+# CS2881 Final Project: Evaluating Orthogonal Projections in Vector Embedding Spaces for Misinformation Detection and Safety-based Semantic Classification
 
 This project performs comprehensive embedding analysis on ethical claims and other text data using multiple embedding models. It includes data collection, embedding generation, visualization, classification, and evaluation pipelines.
 
