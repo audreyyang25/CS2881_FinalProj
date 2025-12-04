@@ -73,12 +73,12 @@ def run_pipeline(model_name, claims):
     texts = [c["text"] for c in claims]
     labels = np.array([1 if c["label"] == "safe" else 0 for c in claims])  # 1=safe
 
-    # ---- Generate Embeddings ----
+    # Generate Embeddings
     print(f"\nGenerating {model_name} embeddings...")
     embed_fn = MODEL_DISPATCH[model_name]
     embeddings = embed_fn(texts)
 
-    # ---- Save as JSONL ----
+    # Save as JSONL
     output_file = f"{model_name}_ethical_claims_embedded.jsonl"
     print(f"Saving to {output_file}...")
 

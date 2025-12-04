@@ -6,9 +6,9 @@
   "n_unsafe": 130,
   "train_size": 193,
   "test_size": 65,
-  "logistic_regression_1d": {
-    "accuracy": 0.676923076923077,
-    "auc": 0.7528409090909091
+  "logistic_regression_2d": {
+    "accuracy": 0.7384615384615385,
+    "auc": 0.7784090909090908
   },
   "logistic_regression_umap": {
     "accuracy": 0.47692307692307695,
@@ -18,9 +18,15 @@
     "accuracy": 0.9076923076923077,
     "auc": 0.9535984848484849
   },
-  "centroid_1d": {
-    "accuracy": 0.6434108527131783,
-    "safe_centroid": 6.180755338716335,
-    "unsafe_centroid": 7.097253585536414
+  "centroid_2d": {
+    "accuracy": 0.6615384615384615,
+    "safe_centroid": [
+      6.208317805887204,
+      16.332304334270926
+    ],
+    "unsafe_centroid": [
+      7.008224153060072,
+      16.811280330699827
+    ]
   }
 }

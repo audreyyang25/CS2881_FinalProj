@@ -15,7 +15,9 @@ voyageai
 PyPDF2
 torch>=2.0.0
 numpy
-hdbscan 
-umap-learn 
-matplotlib 
+hdbscan
+umap-learn
+matplotlib
 scikit-learn
+plotly
+joblib
