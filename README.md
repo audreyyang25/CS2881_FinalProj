@@ -116,6 +116,113 @@ python eval_new_claim.py
 
 Modify the script to input your claim text and select which embedding model to use.
 
+### 4. Data Collection (Web Scraping)
+
+The project includes scripts to collect research papers from Semantic Scholar and arXiv:
+
+#### Step 1: Search and Collect Papers
+
+Search for papers and create a manifest file:
+
+```bash
+cd data_collection/webscraping_papers
+python search_and_collect.py
+```
+
+This script:
+- Searches Semantic Scholar and arXiv for papers matching your queries
+- Creates a `manifest.json` file in `data/papers/` with paper metadata
+- Includes retry logic and rate limiting to handle API constraints
+- Configurable via `config.py` (MAX_RESULTS, REQUEST_DELAY, etc.)
+
+#### Step 2: Download PDFs
+
+Download the PDF files for papers in the manifest:
+
+```bash
+cd data_collection/webscraping_papers
+python downloader.py
+```
+
+This script:
+- Reads `data/papers/manifest.json`
+- Downloads PDF files to `data/papers/`
+- Handles download errors gracefully
+- Shows progress with tqdm
+
+#### Step 3: Extract Text from PDFs
+
+Extract text content from downloaded PDFs:
+
+```bash
+cd data_collection/webscraping_papers
+python extract_conclusions.py
+```
+
+This script:
+- Processes all PDFs in `data/papers/`
+- Extracts full text using pdfplumber (with PyPDF2 fallback)
+- Saves extracted text to JSON files
+- Handles extraction errors and corrupted PDFs
+
+**Note**: The `data/` folder is not included in the repository due to size constraints. Run these scripts to collect your own data.
+
+### 5. N-gram Embedding Analysis (Smoking & Aliens)
+
+The `embedding_ngram_smoking/` and `embedding_ngram_aliens/` directories contain similar pipelines for analyzing temporal trends in claims using embeddings. These modules:
+
+#### Workflow
+
+1. **Generate Embeddings** (`claim_embedding.py`):
+   ```bash
+   cd embedding_ngram_smoking  # or embedding_ngram_aliens
+   python claim_embedding.py
+   ```
+   - Embeds claims using OpenAI, Voyage, or mxbai models
+   - Requires input JSONL file (e.g., `smoking_claims.jsonl` or `alien_claims.jsonl`)
+   - Outputs embedded JSONL files for each model
+
+2. **Process Embeddings** (`embedding_ngram.py`):
+   ```bash
+   python embedding_ngram.py
+   ```
+   - Projects embeddings onto a reference axis (e.g., harmful vs. beneficial)
+   - Computes temporal trends using market smoothing algorithm
+   - Generates n-gram style plots showing how claim sentiment changes over time
+   - Creates both static (PNG) and interactive (HTML) visualizations
+
+3. **Create Visualizations** (`embedding_plotting.py`):
+   ```bash
+   python embedding_plotting.py
+   ```
+   - Generates 2D scatter plots of embeddings
+   - Creates interactive Plotly visualizations
+   - Shows embedding space structure and relationships
+
+4. **UMAP Visualization** (`umap_graph.py`, smoking only):
+   ```bash
+   cd embedding_ngram_smoking
+   python umap_graph.py
+   ```
+   - Reduces embeddings to 2D using UMAP
+   - Creates visualizations colored by labels (e.g., good vs. bad)
+   - Helps understand embedding space structure
+
+#### Key Features
+
+- **Temporal Analysis**: Tracks how claim embeddings change over time
+- **Market Smoothing**: Applies exponential smoothing to create trend lines
+- **Reference Projection**: Projects embeddings onto a reference axis defined by two reference points
+- **Multi-model Comparison**: Compares results across OpenAI, Voyage, and mxbai embeddings
+
+#### Output Files
+
+- `*_claims_embedded.jsonl`: Embedded claims with metadata
+- `plots/*_ngram_market.png`: Temporal trend plots
+- `plots/*_plot_no_minus1.html/png`: Interactive/static plots excluding invalid dates
+- `plots/*_plot_with_minus1.html/png`: Plots including all dates
+- `umap_smoking/*_umap_goodbad.html/png`: UMAP visualizations (smoking only)
+
 ## Key Features
 
 ### 2D Euclidean Projection
@@ -212,8 +319,8 @@ Edit `config.py` to adjust:
 
 ## Authors
 
-Eric Gong
-Audrey Yang
+- **Eric Gong**
+- **Audrey Yang**
 
 ## Acknowledgments
 
