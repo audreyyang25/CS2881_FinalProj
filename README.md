@@ -15,7 +15,7 @@ The analysis includes 2D projections, UMAP visualizations, classification tasks,
 
 ```
 CS2881_FinalProj/
-├── data/                          # Data storage
+├── data/                          # Data storage -- folder NOT INCLUDED in Github due to size constraints. Run files in data_collection to collect data
 │   ├── papers/                    # Research paper PDFs and metadata
 │   └── socialmediaposts/          # Social media post archives
 ├── data_collection/               # Data collection scripts
